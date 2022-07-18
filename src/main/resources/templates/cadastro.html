@@ -1,0 +1,31 @@
+<html>
+
+<head th:replace="~{base :: head}"><title id="pageTitle">Cadastro</title></head>
+
+<body style="background-color: black;" class="d-flex align-items-center justify-content-center">
+	<div style="background-color: aqua; width: 50%; height: 60%"
+		class="d-flex align-items-center justify-content-center">
+		<div class="card mb-3">
+			<form th:action="@{/cadastro/save}" class="card-body " method="post">
+				<div class="form-group">
+					<label for="name">Nome</label>
+					<input name="name" class="form-control" placeholder="Nome" />
+				</div>
+				<div class="form-group">
+					<label for="username">Usuário</label>
+					<input name="username" class="form-control" placeholder="usuário" />
+				</div>
+				<div class="form-group">
+					<label for="password">Senha</label>
+					<input type="password" name="password" class="form-control" placeholder="senha" />
+				</div>
+				<div class="d-flex align-items-center justify-content-end">
+					<button class="btn btn-primary mr-1" type="submit">Cadastrar</button>
+					<a href="/" class="btn btn-primary">Cancelar</a>
+				</div>
+			</form>
+		</div>
+	</div>
+</body>
+
+</html>
