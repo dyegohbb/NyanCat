@@ -1,16 +1,19 @@
 <html>
 
-<head th:replace="~{base :: head}"><title id="pageTitle">::NyanCat::</title></head>
+<head th:replace="~{base :: head}">
+	<title id="pageTitle">::NyanCat::</title>
+</head>
 
 <body style="background-color: black;" class="d-flex align-items-center justify-content-center">
 	<div style="background-color: aqua; width: 50%; height: 60%" class="d-flex flex-column">
 		<div>
 			<div style="flex: 1;" class="d-flex justify-content-between border-bottom border-dark">
 				<div class="p-2 logo">
-				<spam>NyanCat</spam>
+					<spam>NyanCat</spam>
 				</div>
-				<div class="d-flex p-2 align-items-center">
-				<h4 th:text="|Bem-vindo, ${user.name}!|"></h4>
+				<div class="d-flex p-2 align-items-center flex-column">
+					<h4 th:text="|Bem-vindo, ${user.nome}!|"></h4>
+					<h5 th:if="${adm}" class="text-danger">[MODO DEUS]</h5>
 				</div>
 				<div class="d-flex p-2 align-items-center">
 					<a class="text-light" sec:authorize="!isAuthenticated()" href="/login">Login</a>
@@ -19,17 +22,52 @@
 					<form id="form-login" th:action="@{/logout}" method="post"></form>
 				</div>
 			</div>
-			<div style="flex: 10;" class="d-flex align-items-center">
-				<img src="https://raw.githubusercontent.com/gist/brudnak/aba00c9a1c92d226f68e8ad8ba1e0a40/raw/e1e4a92f6072d15014f19aa8903d24a1ac0c41a4/nyan-cat.gif"
-					style="width:100%; height: 80%;">
-
+			<div style="flex: 10;" class="d-flex align-items-center pe-auto">
+				<a title="NÃO CLIQUE!" href="#" data-bs-toggle="modal" th:attr="data-bs-target=|#modal1|">
+					<img src="https://raw.githubusercontent.com/gist/brudnak/aba00c9a1c92d226f68e8ad8ba1e0a40/raw/e1e4a92f6072d15014f19aa8903d24a1ac0c41a4/nyan-cat.gif"
+						style="width:100%; height: 80%; margin-top: 1rem">
+				</a>
 			</div>
 		</div>
 		<audio controls autoplay loop style="width:240px;">
 			<source src="/music/original.mp3">
 			<source src="/music/original.ogg">
 		</audio>
+
+		<div class="modal fade" th:id="|modal1|" tabindex="-1" th:attr="aria-labelledby=|modal1|" aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<form th:action="@{/godmod}" class="card-body " method="post">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title" th:id="|modal$1Label|">Ativar Modo DEUS</h5>
+							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						</div>
+						<div class="modal-body">
+							<div class="d-flex flex-column align-items-center justify-content-center">
+								<h6 class="nowrap ellipsis" th:text="|Você merece o Modo DEUS, ${nome}?|" />
+								<h6 class="card-text nowrap ellipsis">Terá que provar!</h6>
+								<h6 class="card-text nowrap ellipsis">Digite a constante de Planck com 8 casas decimais:
+								</h6>
+								<div class="form-group">
+									<input type="password" name="planck" class="form-control" maxlength="10" size="5" />
+								</div>
+							</div>
+						</div>
+						<div class="modal-footer">
+							<button style="width: 82%" type="button" class="btn btn-dark"
+								data-bs-dismiss="modal">Desistir</button>
+							<button style="width: 14%" class="btn btn-danger" title="O erro será cobrado com sangue."
+								type="submit">Enviar</button>
+						</div>
+				</form>
+			</div>
+		</div>
 	</div>
+	</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
+		crossorigin="anonymous"></script>
 </body>
 
 </html>
