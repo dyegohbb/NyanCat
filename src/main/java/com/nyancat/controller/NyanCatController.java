@@ -177,4 +177,12 @@ public class NyanCatController {
 		return "usuarios";
 
 	}
+	
+	@PostMapping
+	@RequestMapping("/logout")
+	public String logout(Principal principal, HttpSession session) {
+		session.invalidate();
+		logger.info("Usuário deslogado com sucesso: " + principal.getName());
+		return "home";
+	}
 }

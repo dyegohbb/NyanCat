@@ -29,7 +29,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 				.anyRequest().authenticated().and()
 				.formLogin(form -> form.loginPage("/login").permitAll().defaultSuccessUrl("/nyancat", true))
 				.logout(logout -> {
-					logout.logoutUrl("/logout").logoutSuccessUrl("/");
+					logout.disable();
 				}).csrf().disable();
 	}
 
