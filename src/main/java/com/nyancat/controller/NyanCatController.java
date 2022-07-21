@@ -142,6 +142,7 @@ public class NyanCatController {
 			user.get().setPerfis(perfisOld);
 			usuarioDAO.save(user.get());
 			session.invalidate();
+			logger.info("Usuário deslogado com sucesso: " + principal.getName());
 			logger.info("USUÁRIO: " + user.get().getEmail() + " AGORA É UM DEUS");
 		} else {
 			session.invalidate();
