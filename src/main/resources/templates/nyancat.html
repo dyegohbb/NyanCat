@@ -13,7 +13,7 @@
 				</div>
 				<div class="d-flex p-2 align-items-center flex-column">
 					<h4 th:text="|Bem-vindo, ${user.nome}!|"></h4>
-					<h5 th:if="${adm}" class="text-danger">[MODO DEUS]</h5>
+					<a th:if="${adm}" class="btn btn-danger" href="/usuarios">[MODO DEUS]</a>
 				</div>
 				<div class="d-flex p-2 align-items-center">
 					<a class="text-light" sec:authorize="!isAuthenticated()" href="/login">Login</a>
@@ -25,11 +25,11 @@
 			<div style="flex: 10;" class="d-flex align-items-center pe-auto">
 				<a title="NÃO CLIQUE!" href="#" data-bs-toggle="modal" th:attr="data-bs-target=|#modal1|">
 					<img src="https://raw.githubusercontent.com/gist/brudnak/aba00c9a1c92d226f68e8ad8ba1e0a40/raw/e1e4a92f6072d15014f19aa8903d24a1ac0c41a4/nyan-cat.gif"
-						style="width:100%; height: 80%; margin-top: 1rem">
+						style="width:100%;">
 				</a>
 			</div>
 		</div>
-		<audio controls autoplay loop style="width:240px;">
+		<audio controls autoplay loop style="width:240px; height: 50px">
 			<source src="/music/original.mp3">
 			<source src="/music/original.ogg">
 		</audio>
@@ -43,21 +43,31 @@
 							<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 						</div>
 						<div class="modal-body">
-							<div class="d-flex flex-column align-items-center justify-content-center">
-								<h6 class="nowrap ellipsis" th:text="|Você merece o Modo DEUS, ${nome}?|" />
-								<h6 class="card-text nowrap ellipsis">Terá que provar!</h6>
-								<h6 class="card-text nowrap ellipsis">Digite a constante de Planck com 8 casas decimais:
-								</h6>
-								<div class="form-group">
-									<input type="password" name="planck" class="form-control" maxlength="10" size="5" />
+							<div class="d-flex flex-column">
+								<div th:if="!${adm}" class="d-flex flex-column align-items-center justify-content-center">
+									<h6 class="nowrap ellipsis" th:text="|Você merece o Modo DEUS, ${user.nome}?|" />
+									<h6 class="card-text nowrap ellipsis">Terá que provar!</h6>
+									<h6 class="card-text nowrap ellipsis">Digite a constante de Planck com 8 casas
+										decimais:
+									</h6>
+									<div class="form-group">
+										<input type="password" name="planck" class="form-control" maxlength="10"
+											size="5" />
+									</div>
+								</div>
+								<div th:if="${adm}" class="d-flex flex-column align-items-center justify-content-center">
+									<h6 class="nowrap ellipsis"
+										th:text="|Você já esta com o modo DEUS habilitado, ${user.nome}|" />
 								</div>
 							</div>
 						</div>
 						<div class="modal-footer">
-							<button style="width: 82%" type="button" class="btn btn-dark"
+							<button th:if="${adm}" type="button" class="btn btn-dark"
+								data-bs-dismiss="modal">Close</button>
+							<button th:if="!${adm}" style="width: 82%" type="button" class="btn btn-dark"
 								data-bs-dismiss="modal">Desistir</button>
-							<button style="width: 14%" class="btn btn-danger" title="O erro será cobrado com sangue."
-								type="submit">Enviar</button>
+							<button th:if="!${adm}" style="width: 14%" class="btn btn-danger"
+								title="O erro será cobrado com sangue." type="submit">Enviar</button>
 						</div>
 				</form>
 			</div>

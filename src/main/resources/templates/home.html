@@ -1,12 +1,15 @@
 <html>
 
-<head th:replace="~{base :: head}"><title id="pageTitle">Inicio</title></head>
+<head th:replace="~{base :: head}">
+	<title id="pageTitle">Inicio</title>
+</head>
 
 <body style="background-color: black;" class="d-flex align-items-center justify-content-center">
 	<div style="background-color: aqua; width: 50%; height: 60%">
-		<div class="p-1 logo text-decoration-none"><a href="/nyancat" class="text-decoration-none text-dark">NyanCat</a></div>
+		<div class="p-1 logo text-decoration-none"><a href="/" class="text-decoration-none text-dark">NyanCat</a>
+		</div>
 		<center>
-		<h1>Bem vindo!</h1>
+			<h1>Bem vindo!</h1>
 		</center>
 		<div style="width: 100%; height: 70%;" class="d-flex align-items-center justify-content-center">
 			<a href="/login" style="width: 45%; height:70%;" class="align-items-center mr-1"><button

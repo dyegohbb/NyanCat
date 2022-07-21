@@ -1,11 +1,13 @@
 package com.nyancat.model;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -13,6 +15,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -24,9 +27,18 @@ public class Usuario implements UserDetails {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private long id;
+	
+	@Column(unique = true)
 	private String email;
 	private String nome;
 	private String senha;
+	private Integer tentativas = 3;
+	
+	@Column(columnDefinition="tinyint(1) default 0")
+	private boolean bloqueado = false;
+	
+	@DateTimeFormat(pattern = "yyyy-MM-dd hh mm ss")
+	private LocalDateTime dataDesbloqueio;
 
 	@ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
 	private List<Perfil> perfis = new ArrayList<Perfil>(Arrays.asList(new Perfil("ROLE_USER")));
@@ -77,6 +89,43 @@ public class Usuario implements UserDetails {
 	public void setPerfis(List<Perfil> perfis) {
 		this.perfis = perfis;
 	}
+	
+
+	public Integer getTentativas() {
+		return tentativas;
+	}
+
+	public void setTentativas(Integer tentativas) {
+		this.tentativas = tentativas;
+	}
+
+	public boolean getBloqueado() {
+		return bloqueado;
+	}
+	
+	/** Método tentativa de desbloqueio
+	 * @return Boolean - TRUE: desbloqueado; FALSE: ainda bloqueado*/
+	public boolean solicitarDesbloqueio() {
+		if(this.bloqueado && this.dataDesbloqueio != null) {
+			if(LocalDateTime.now().isAfter(dataDesbloqueio)) {
+				this.bloqueado = false;
+				this.tentativas = 3;
+			}
+		}
+		return !bloqueado;
+	}
+
+	public void setBloqueado(boolean bloqueado) {
+		this.bloqueado = bloqueado;
+	}
+
+	public LocalDateTime getDataDesbloqueio() {
+		return dataDesbloqueio;
+	}
+
+	public void setDataDesbloqueio(LocalDateTime dataDesbloqueio) {
+		this.dataDesbloqueio = dataDesbloqueio;
+	}
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -117,7 +166,7 @@ public class Usuario implements UserDetails {
 	@Override
 	public boolean isEnabled() {
 		// TODO Auto-generated method stub
-		return true;
+		return !bloqueado;
 	}
 
 }

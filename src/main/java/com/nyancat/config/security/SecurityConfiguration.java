@@ -23,8 +23,10 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
-		http.authorizeRequests().antMatchers("/image/favicon.ico").permitAll().antMatchers("/").permitAll()
-				.antMatchers("/cadastro/**").permitAll().anyRequest().authenticated().and()
+		http.authorizeRequests().antMatchers("/image/**").permitAll().antMatchers("/").permitAll().antMatchers("/css/**").permitAll()
+				.antMatchers("/cadastro/**").permitAll()
+				.antMatchers("/usuarios/**").hasRole("ADM")
+				.anyRequest().authenticated().and()
 				.formLogin(form -> form.loginPage("/login").permitAll().defaultSuccessUrl("/nyancat", true))
 				.logout(logout -> {
 					logout.logoutUrl("/logout").logoutSuccessUrl("/");
@@ -35,11 +37,6 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
 		BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 		auth.userDetailsService(authService).passwordEncoder(encoder);
-//		
-//		
-//		auth.jdbcAuthentication()
-//		.dataSource(dataSource)
-//		.passwordEncoder(encoder);
 	}
 
 }

@@ -1,0 +1,67 @@
+<html>
+
+<head th:replace="~{base :: head}">
+	<title id="pageTitle">Inicio</title>
+</head>
+
+<body style="background-color: black;" class="d-flex align-items-center justify-content-center">
+	<div style="background-color: aqua; width: 50%; height: 60%">
+		<div class="p-1 logo text-decoration-none">
+			<a href="/" class="text-decoration-none text-dark">NyanCat</a>
+		</div>
+		<div class="d-flex justify-content-center">
+			<h1>::Painel de Usuários::</h1>
+		</div>
+		<div class="d-flex justify-content-center align-items-center">
+			<div class="card mt-5" style="width: 20rem;">
+				<div class="card-body " style="overflow-y: scroll; height: 20rem;">
+					<div th:each="usuario : ${usuarios}">
+						<a class="text-decoration-none text-dark" href="#" data-bs-toggle="modal"
+							th:attr="data-bs-target=|#modal${usuario.id}|">
+							<div class="d-flex flex-row">
+								<h5 class="card-title linha-usuarios" th:attr="title=${usuario.nome}"
+									th:text="${usuario.nome}" />
+							</div>
+							<hr />
+						</a>
+						<!--modal-->
+						<div class="modal fade" th:id="|modal${usuario.id}|" tabindex="-1"
+							th:attr="aria-labelledby=|modal1|" aria-hidden="true">
+							<div class="modal-dialog modal-dialog-centered">
+								<form th:action="|/usuarios/delete/${usuario.id}|" class="card-body " method="POST">
+									<div class="modal-content">
+										<div class="modal-header">
+											<h5 class="modal-title" th:id="|modal${usuario.id}Label|"
+												th:text="${usuario.nome}" />
+											<button type="button" class="btn-close" data-bs-dismiss="modal"
+												aria-label="Close"></button>
+										</div>
+										<div class="modal-body">
+											<div class="d-flex flex-column">
+												<h6 class="nowrap ellipsis" th:text="|Email:&ensp;${usuario.email}|" />
+												<div class="d-flex flex-row">
+													<h6 th:text="|Perfis:&ensp;|" />
+													<h6 th:each="perfil : ${usuario.perfis}" class="nowrap ellipsis"
+														th:text="|${perfil.nome},&ensp;|" />
+												</div>
+											</div>
+										</div>
+										<div class="modal-footer">
+											<button class="btn btn-danger" type="submit">Deletar</button>
+											<button type="button" class="btn btn-dark"
+												data-bs-dismiss="modal">Close</button>
+										</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"
+		integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
+		crossorigin="anonymous"></script>
+</body>
+
+</html>
