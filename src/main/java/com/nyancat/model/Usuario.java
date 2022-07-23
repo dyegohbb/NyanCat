@@ -14,12 +14,17 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
+import javax.persistence.Transient;
 
+import org.hibernate.envers.Audited;
+import org.hibernate.envers.NotAudited;
+import org.springframework.data.history.RevisionMetadata;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 @Entity
+@Audited
 public class Usuario implements UserDetails {
 
 	private static final long serialVersionUID = -9033808678351022373L;
@@ -32,7 +37,7 @@ public class Usuario implements UserDetails {
 	private String email;
 	private String nome;
 	private String senha;
-	private Integer tentativas = 3;
+	private Integer tentatives = 3;
 	
 	@Column(columnDefinition="tinyint(1) default 0")
 	private boolean bloqueado = false;
@@ -40,8 +45,12 @@ public class Usuario implements UserDetails {
 	@DateTimeFormat(pattern = "yyyy-MM-dd hh mm ss")
 	private LocalDateTime dataDesbloqueio;
 
+	@NotAudited
 	@ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.PERSIST)
 	private List<Perfil> perfis = new ArrayList<Perfil>(Arrays.asList(new Perfil("ROLE_USER")));
+	
+	@Transient
+	private RevisionMetadata<Integer> editVersion;
 
 	public Usuario() {
 	}
@@ -92,11 +101,11 @@ public class Usuario implements UserDetails {
 	
 
 	public Integer getTentativas() {
-		return tentativas;
+		return tentatives;
 	}
 
-	public void setTentativas(Integer tentativas) {
-		this.tentativas = tentativas;
+	public void setTentativas(Integer tentatives) {
+		this.tentatives = tentatives;
 	}
 
 	public boolean getBloqueado() {
@@ -109,7 +118,7 @@ public class Usuario implements UserDetails {
 		if(this.bloqueado && this.dataDesbloqueio != null) {
 			if(LocalDateTime.now().isAfter(dataDesbloqueio)) {
 				this.bloqueado = false;
-				this.tentativas = 3;
+				this.tentatives = 3;
 			}
 		}
 		return !bloqueado;
@@ -169,4 +178,12 @@ public class Usuario implements UserDetails {
 		return !bloqueado;
 	}
 
+	public RevisionMetadata<Integer> getEditVersion() {
+		return editVersion;
+	}
+
+	public void setEditVersion(RevisionMetadata<Integer> editVersion) {
+		this.editVersion = editVersion;
+	}
+	
 }

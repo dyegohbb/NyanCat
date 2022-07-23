@@ -1,17 +1,18 @@
 package com.nyancat;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import com.nyancat.dao.PerfilDAO;
-import com.nyancat.model.Perfil;
+import org.springframework.data.envers.repository.support.EnversRevisionRepositoryFactoryBean;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
+@EnableJpaRepositories(repositoryFactoryBeanClass = EnversRevisionRepositoryFactoryBean.class)
 public class NyanCatApplication {
-
+	
 	public static void main(String[] args) {
 		SpringApplication.run(NyanCatApplication.class, args);
 	}
 
 }
+
+
