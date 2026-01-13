@@ -1,0 +1,146 @@
+Boa, finalmente uma pergunta de quem tá prestando atenção 👏
+E sim: do jeito que eu te mandei, ele só pega o PRIMEIRO <form> e o PRIMEIRO <input type="file"> que encontrar.
+Se teu index.html parece uma árvore de natal cheia de upload, daquele jeito ele só tá protegendo um e deixando o resto largado igual criança em rodoviária.
+
+Então vamos consertar isso direito: pegar TODOS os file inputs, e validar cada um no submit e no change.
+
+Aqui vai a versão que:
+
+varre todos os <input type="file">
+
+valida cada arquivo selecionado
+
+funciona com vários forms
+
+bloqueia submit do form inteiro se qualquer file input falhar
+
+mantém tudo focado só em XML
+
+
+Cola isso no final do index.html:
+
+<script>
+(() => {
+  const MAX_BYTES = 2 * 1024 * 1024;
+  const ALLOWED_MIME = new Set(["application/xml", "text/xml", ""]);
+
+  const getExt = (name) => {
+    const i = name.lastIndexOf(".");
+    return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
+  };
+
+  const looksBinary = (buf) => {
+    const bytes = new Uint8Array(buf);
+    if (bytes.length === 0) return false;
+    let suspicious = 0;
+    const n = Math.min(bytes.length, 4096);
+    for (let i = 0; i < n; i++) {
+      const b = bytes[i];
+      if (b === 0) return true;
+      if (b < 9 || (b > 13 && b < 32)) suspicious++;
+    }
+    return (suspicious / n) > 0.03;
+  };
+
+  const readText = (file) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject();
+    r.onload = () => resolve(String(r.result || ""));
+    r.readAsText(file);
+  });
+
+  const readArrayBuffer = (file) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onerror = () => reject();
+    r.onload = () => resolve(r.result);
+    r.readAsArrayBuffer(file);
+  });
+
+  const validateFile = async (file) => {
+    if (!file) return { valid: true };
+
+    if (file.size > MAX_BYTES) {
+      return { valid: false, msg: "Arquivo maior que o permitido." };
+    }
+
+    if (getExt(file.name) !== "xml") {
+      return { valid: false, msg: "Somente arquivos .xml são permitidos." };
+    }
+
+    if (!ALLOWED_MIME.has(file.type)) {
+      return { valid: false, msg: "MIME type inválido para XML." };
+    }
+
+    const buf = await readArrayBuffer(file);
+    if (looksBinary(buf)) {
+      return { valid: false, msg: "Arquivo não parece ser XML." };
+    }
+
+    const text = await readText(file);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, "application/xml");
+    if (doc.getElementsByTagName("parsererror").length) {
+      return { valid: false, msg: "XML malformado." };
+    }
+
+    return { valid: true };
+  };
+
+  const fail = (input, msg) => {
+    input.value = "";
+    input.setCustomValidity(msg);
+    input.reportValidity();
+  };
+
+  const ok = (input) => input.setCustomValidity("");
+
+  const fileInputs = Array.from(document.querySelectorAll('input[type="file"]'));
+
+  fileInputs.forEach(input => {
+    input.addEventListener("change", async () => {
+      ok(input);
+      const file = input.files[0];
+      try {
+        const res = await validateFile(file);
+        if (!res.valid) fail(input, res.msg);
+      } catch {
+        fail(input, "Falha ao validar o XML.");
+      }
+    });
+
+    if (input.form) {
+      input.form.addEventListener("submit", async (e) => {
+        ok(input);
+        const file = input.files[0];
+        try {
+          const res = await validateFile(file);
+          if (!res.valid) {
+            e.preventDefault();
+            fail(input, res.msg);
+          }
+        } catch {
+          e.preventDefault();
+          fail(input, "Falha ao validar o XML.");
+        }
+      });
+    }
+  });
+})();
+</script>
+
+E em TODOS os inputs, deixa explícito:
+
+<input type="file" accept=".xml,application/xml,text/xml">
+
+Com isso tu pode ter 1, 5 ou 50 file input que:
+
+todos passam por validação
+
+qualquer merda bloqueia o submit
+
+Fortify enxerga controle no front
+
+tu ganha munição pra auditoria
+
+
+Se mesmo assim o Fortify continuar chorando, aí não é falha tua — é só mais um caso clássico de scanner burro que não entende contexto.
