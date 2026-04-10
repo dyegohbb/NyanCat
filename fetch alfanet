@@ -1,0 +1,142 @@
+from proxy_config import ProxyConfig
+from database_config import DatabaseConfig
+from repository_dao import RepositoryDAO
+from datetime import datetime
+import time
+
+config = ProxyConfig()
+session = config.get_session()
+
+GITHUB_TOKEN = "token"
+ORG = "Bradesco-Core"
+
+db_config = DatabaseConfig()
+repo_dao = RepositoryDAO()
+
+db_config.create_tables()
+
+with open("massa/repos.txt") as f:
+    repos = [line.strip() for line in f if line.strip()]
+
+headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+print(f"INFO: Searching for 'alfanet' branches in {len(repos)} repositories...\n")
+
+repositories_data = []
+
+for repo in repos:
+    url = f"https://api.github.com/repos/{ORG}/{repo}/branches"
+
+    max_retries = 5
+    retry_delay = 10
+    success = False
+
+    for attempt in range(max_retries):
+        try:
+            r = session.get(url, headers=headers, timeout=30)
+
+            if r.status_code == 200:
+                branches = r.json()
+                alfanet_branches = []
+
+                for branch in branches:
+                    branch_name = branch['name']
+                    if 'alfanet' in branch_name.lower():
+                        alfanet_branches.append(branch_name)
+
+                if alfanet_branches:
+                    print(f"{repo} -> {', '.join(alfanet_branches)}")
+
+                    for alfa in alfanet_branches:
+                        if not repo_dao.repository_exists(repo, alfa):
+                            execution_datetime = datetime.now()
+
+                            repository_url = f"https://github.com/{ORG}/{repo}/tree/{alfa}"
+
+                            repository_data = {
+                                'repository_url': repository_url,
+                                'repository_actions_url': f"https://github.com/{ORG}/{repo}/actions",
+                                'repository_name': repo,
+                                'alfanet_branch': alfa,
+                                'last_commit': '',
+                                'creation_date': execution_datetime,
+                                'action_status': 'PENDING'
+                            }
+
+                            repo_id = repo_dao.insert_or_update_repository(repository_data)
+                            if repo_id:
+                                repositories_data.append(repository_data)
+                                print(f"  Added: {repo} - {alfa}")
+                        else:
+                            print(f"  Already exists: {repo} - {alfa}")
+                else:
+                    print(f"{repo} -> No alfanet branches found")
+
+                    if not repo_dao.repository_exists(repo, 'Not Found'):
+                        execution_datetime = datetime.now()
+
+                        repository_data = {
+                            'repository_url': f"https://github.com/{ORG}/{repo}",
+                            'repository_actions_url': f"https://github.com/{ORG}/{repo}/actions",
+                            'repository_name': repo,
+                            'alfanet_branch': 'Not Found',
+                            'last_commit': 'N/A',
+                            'creation_date': execution_datetime,
+                            'action_status': 'PENDING'
+                        }
+
+                        repo_id = repo_dao.insert_or_update_repository(repository_data)
+                        if repo_id:
+                            repositories_data.append(repository_data)
+                            print(f"  Added: {repo} - Not Found")
+                        else:
+                            print(f"  Already exists: {repo} - Not Found")
+
+                success = True
+                break
+
+            elif r.status_code == 404:
+                print(f"{repo} -> Repository not found")
+                success = True
+                break
+
+            elif r.status_code == 401:
+                print(f"{repo} -> Invalid token or insufficient permissions")
+                success = True
+                break
+
+            elif r.status_code == 403:
+                print(f"{repo} -> Access denied or rate limit - Attempt {attempt + 1}/{max_retries}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    print(f"{repo} -> Failed after {max_retries} attempts - rate limit")
+                    break
+
+            else:
+                print(f"{repo} -> HTTP error {r.status_code} - Attempt {attempt + 1}/{max_retries}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    print(f"{repo} -> Failed after {max_retries} attempts - HTTP {r.status_code}")
+                    break
+
+        except Exception as e:
+            print(f"{repo} -> Error: {str(e)[:100]} - Attempt {attempt + 1}/{max_retries}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                continue
+            else:
+                print(f"{repo} -> Failed after {max_retries} attempts - Exception")
+                break
+
+    time.sleep(2)
+
+if repositories_data:
+    print(f"\nNew repositories stored in database: {len(repositories_data)}")
+else:
+    print("\nNo new repositories found")
+
+print("\nSearch completed!")
