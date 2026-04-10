@@ -1,0 +1,98 @@
+from proxy_config import ProxyConfig
+import datetime
+import os
+
+config = ProxyConfig()
+session = config.get_session()
+
+GITHUB_TOKEN = "token"
+ORG = "Bradesco-Core"
+
+def fetch_all_repositories():
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    all_repos = []
+    page = 1
+    per_page = 100
+
+    print(f"INFO: Fetching repositories from organization '{ORG}'...\n")
+
+    while True:
+        url = f"https://api.github.com/orgs/{ORG}/repos"
+        params = {
+            "per_page": per_page,
+            "page": page,
+            "type": "all"
+        }
+
+        try:
+            response = session.get(url, headers=headers, params=params, timeout=30)
+
+            if response.status_code == 200:
+                repos = response.json()
+
+                if not repos:
+                    break
+
+                repo_names = [repo["name"] for repo in repos]
+                all_repos.extend(repo_names)
+
+                print(f"Page {page}: Fetched {len(repos)} repositories (Total: {len(all_repos)})")
+
+                if len(repos) < per_page:
+                    break
+
+                page += 1
+
+            elif response.status_code == 404:
+                print(f"ERROR: Organization '{ORG}' not found")
+                return []
+            elif response.status_code == 401:
+                print(f"ERROR: Invalid token or insufficient permissions")
+                return []
+            elif response.status_code == 403:
+                print(f"ERROR: Access denied or rate limit exceeded")
+                return []
+            else:
+                print(f"ERROR: HTTP {response.status_code} error")
+                return []
+
+        except Exception as e:
+            print(f"ERROR: Failed to fetch repositories: {str(e)[:100]}")
+            return []
+
+    return all_repos
+
+
+def save_repositories_to_file(repositories):
+    output_file = "massa/repos.txt"
+
+    if os.path.exists(output_file):
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        old_file = f"massa/repos_old_{timestamp}.txt"
+        os.rename(output_file, old_file)
+        print(f"\nINFO: Renamed existing file '{output_file}' to '{old_file}'")
+
+    try:
+        with open(output_file, "w", encoding="utf-8") as f:
+            for repo in repositories:
+                f.write(f"{repo}\n")
+
+        print(f"INFO: Successfully saved {len(repositories)} repositories to '{output_file}'")
+
+    except Exception as e:
+        print(f"ERROR: Failed to save repositories to file: {str(e)}")
+
+
+if __name__ == "__main__":
+    print("INFO: Starting repository fetch process...\n")
+
+    repositories = fetch_all_repositories()
+
+    if repositories:
+        print(f"\nINFO: Total repositories found: {len(repositories)}")
+        save_repositories_to_file(repositories)
+    else:
+        print("\nWARNING: No repositories found or error occurred")
+
+    print("\nINFO: Process completed")
