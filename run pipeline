@@ -1,0 +1,231 @@
+from proxy_config import ProxyConfig
+from database_config import DatabaseConfig
+from repository_dao import RepositoryDAO
+from datetime import datetime
+import time
+import base64
+import json
+
+config = ProxyConfig()
+session = config.get_session()
+
+GITHUB_TOKEN = "token"
+ORG = "Bradesco-Core"
+
+db_config = DatabaseConfig()
+repo_dao = RepositoryDAO()
+
+
+def get_workflows(repository_name):
+    url = f"https://api.github.com/repos/{ORG}/{repository_name}/actions/workflows"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    try:
+        response = session.get(url, headers=headers, timeout=30)
+
+        if response.status_code == 200:
+            workflows = response.json()
+            return workflows.get('workflows', [])
+        elif response.status_code == 404:
+            print(f"WARNING: repository {repository_name} not found")
+            return []
+        elif response.status_code == 403:
+            print(f"WARNING: Access denied to repository {repository_name}")
+            return []
+        else:
+            print(f"ERROR: HTTP {response.status_code} error for repository {repository_name}")
+            return []
+
+    except Exception as e:
+        print(f"ERROR: Failed to retrieve workflows for {repository_name}: {str(e)[:100]}")
+        return []
+
+
+def get_workflow_content(repository_name, workflow_path):
+    clean_path = workflow_path.replace('.github/workflows/', '')
+    url = f"https://api.github.com/repos/{ORG}/{repository_name}/contents/.github/workflows/{clean_path}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    try:
+        response = session.get(url, headers=headers, timeout=30)
+
+        if response.status_code == 200:
+            content_data = response.json()
+            encoded_content = content_data.get('content', '')
+            decoded_content = base64.b64decode(encoded_content).decode('utf-8')
+            return decoded_content
+        else:
+            print(f"WARNING: Failed to retrieve workflow content (HTTP {response.status_code})")
+            return None
+
+    except Exception as e:
+        print(f"ERROR: Failed to retrieve workflow content: {str(e)[:100]}")
+        return None
+
+
+def parse_workflow_inputs(workflow_content):
+    if not workflow_content:
+        return {}
+
+    try:
+        lines = workflow_content.split('\n')
+        inputs = {}
+        in_workflow_dispatch = False
+        in_inputs = False
+        current_input = None
+
+        for line in lines:
+            stripped = line.strip()
+
+            if 'workflow_dispatch:' in stripped:
+                in_workflow_dispatch = True
+                continue
+
+            if in_workflow_dispatch and 'inputs:' in stripped:
+                in_inputs = True
+                continue
+
+            if in_inputs and stripped:
+                if not line.startswith(' ') and not line.startswith('\t'):
+                    break
+
+                if ':' in stripped and not stripped.startswith('type:') and not stripped.startswith('description:') and not stripped.startswith('required:') and not stripped.startswith('default:') and not stripped.startswith('options:'):
+                    current_input = stripped.split(':')[0].strip()
+                    inputs[current_input] = {}
+
+                elif current_input:
+                    if stripped.startswith('type:'):
+                        inputs[current_input]['type'] = stripped.split(':', 1)[1].strip()
+                    elif stripped.startswith('description:'):
+                        inputs[current_input]['description'] = stripped.split(':', 1)[1].strip().strip('"')
+                    elif stripped.startswith('required:'):
+                        inputs[current_input]['required'] = stripped.split(':', 1)[1].strip()
+                    elif stripped.startswith('default:'):
+                        inputs[current_input]['default'] = stripped.split(':', 1)[1].strip().strip('"')
+                    elif stripped.startswith('options:'):
+                        inputs[current_input]['options'] = []
+                    elif stripped.startswith('-') and 'options' in inputs.get(current_input, {}):
+                        option_value = stripped[1:].strip().strip('"')
+                        inputs[current_input]['options'].append(option_value)
+
+        return inputs
+
+    except Exception as e:
+        print(f"ERROR: Failed to parse workflow inputs: {str(e)[:100]}")
+        return {}
+
+
+def trigger_workflow_dispatch(repository_name, workflow_id, branch_name, pipeline_config):
+    url = f"https://api.github.com/repos/{ORG}/{repository_name}/actions/workflows/{workflow_id}/dispatches"
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github.v3+json",
+        "Content-Type": "application/json"
+    }
+
+    inputs = {}
+    for key, value in pipeline_config.items():
+        if isinstance(value, bool):
+            inputs[key] = str(value).lower()
+        else:
+            inputs[key] = str(value)
+
+    payload = {
+        "ref": branch_name,
+        "inputs": inputs
+    }
+
+    try:
+        response = session.post(url, headers=headers, json=payload, timeout=30)
+
+        if response.status_code == 204:
+            print(f"SUCCESS: Workflow dispatch triggered successfully")
+            print(f"Branch: {branch_name}")
+            print(f"Inputs: {', '.join([f'{k}={v}' for k, v in inputs.items()])}")
+            return True
+        elif response.status_code == 404:
+            print(f"ERROR: Workflow not found or repository not accessible")
+            return False
+        elif response.status_code == 422:
+            print(f"ERROR: Invalid workflow inputs or branch not found")
+            print(f"Response: {response.text[:200]}")
+            return False
+        else:
+            print(f"ERROR: HTTP {response.status_code} error triggering workflow")
+            print(f"Response: {response.text[:200]}")
+            return False
+
+    except Exception as e:
+        print(f"ERROR: Failed to trigger workflow: {str(e)[:100]}")
+        return False
+
+
+def process_repositories():
+    repositories = repo_dao.get_repositories_with_alfanet()
+
+    if not repositories:
+        print("INFO: No repositories with alfanet branches found in database")
+        return
+
+    print(f"INFO: Processing {len(repositories)} repositories with alfanet branches...")
+
+    batch_size = 20
+    total_batches = (len(repositories) + batch_size - 1) // batch_size
+
+    for batch_index in range(total_batches):
+        start_index = batch_index * batch_size
+        end_index = min(start_index + batch_size, len(repositories))
+        batch_repos = repositories[start_index:end_index]
+
+        print(f"\nProcessing batch {batch_index + 1}/{total_batches} ({len(batch_repos)} repositories)")
+
+        for repo in batch_repos:
+            repository_name = repo['repository_name']
+            branch_name = repo['alfanet_branch']
+            action_status = repo['action_status']
+            last_db_commit = repo.get('last_commit', 'N/A')
+
+            print(f"\nRepository: {repository_name}")
+            print(f"Branch: {branch_name}")
+
+            last_git_commit = get_last_commit(repository_name, branch_name)
+
+            if last_git_commit != last_db_commit or action_status == 'ERROR':
+                print(f"INFO: New commit detected - triggering pipeline")
+                print(f"Database commit: {last_db_commit[:10]}...")
+                print(f"Git commit: {last_git_commit[:10]}...")
+
+                target_workflow = get_target_workflow(repository_name, branch_name)
+
+                if target_workflow:
+                    success = run_pipeline(target_workflow, repository_name, branch_name, last_git_commit)
+                else:
+                    print(f"INFO: No changes detected - skipping execution")
+
+        if batch_index < total_batches - 1:
+            print(f"Waiting 10 seconds before next batch...")
+            time.sleep(10)
+
+
+def get_last_commit(repo, branch_name):
+    url = f"https://api.github.com/repos/{ORG}/{repo}/commits/{branch_name}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    try:
+        response = session.get(url, headers=headers, timeout=30)
+
+        if response.status_code == 200:
+            commit_data = response.json()
+            commit_sha = commit_data.get('sha', 'N/A')
+            return commit_sha
+        else:
+            return "N/A"
+
+    except Exception:
+        return "N/A"
+
+
+if __name__ == "__main__":
+    print("INFO: Starting pipeline execution process...")
+    process_repositories()
+    print("\nINFO: Pipeline execution process completed!")
