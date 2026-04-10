@@ -1,0 +1,64 @@
+import os
+import requests
+import urllib3
+from requests.auth import HTTPProxyAuth
+
+class ProxyConfig:
+    def __init__(self):
+        self.proxy_enable = True
+        self.proxy_host = "proxybl.net.bradesco.com.br"
+        self.proxy_port = 80
+        self.proxy_user = "1459264"
+        self.proxy_password = "dhbb8704"
+        self.ssl_verification = False
+
+        self.session = None
+        self._configure()
+
+    def _configure(self):
+        """Configura proxy e SSL"""
+        self.session = requests.Session()
+
+        if self.proxy_enable:
+            self._configure_proxy()
+
+        if not self.ssl_verification:
+            self._disable_ssl_verification()
+
+    def _configure_proxy(self):
+        """Configura proxy corporativo"""
+        print(f"Configurando proxy corporativo: {self.proxy_host}:{self.proxy_port}")
+
+        proxies = {
+            'http': f'http://{self.proxy_host}:{self.proxy_port}',
+            'https': f'http://{self.proxy_host}:{self.proxy_port}'
+        }
+
+        self.session.proxies.update(proxies)
+
+        if self.proxy_user and self.proxy_password:
+            self.session.auth = HTTPProxyAuth(self.proxy_user, self.proxy_password)
+            print(f"Autenticacao de proxy configurada para usuario: {self.proxy_user}")
+
+    def _disable_ssl_verification(self):
+        """Desabilita verificacao SSL (APENAS PARA DESENVOLVIMENTO)"""
+        print("Verificacao SSL desabilitada (APENAS PARA DESENVOLVIMENTO)")
+        self.session.verify = False
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    def get_session(self):
+        """Retorna sessao configurada"""
+        return self.session
+
+
+# Exemplo de uso
+if __name__ == "__main__":
+    config = ProxyConfig()
+    session = config.get_session()
+
+    # Teste de conectividade
+    try:
+        response = session.get("https://api.github.com", timeout=10)
+        print(f"Teste de conectividade bem-sucedido: {response.status_code}")
+    except Exception as e:
+        print(f"Erro no teste de conectividade: {e}")
