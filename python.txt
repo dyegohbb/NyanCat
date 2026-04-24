@@ -1,0 +1,19 @@
+Crie uma solução integrada entre Java e Python para processar relatórios do Fortify a partir de um arquivo ZIP.
+
+No lado Java, a aplicação deve receber como entrada o caminho de um arquivo ZIP que contém um ou mais arquivos PDF de relatório do Fortify. O Java deve extrair o conteúdo desse ZIP para um diretório temporário, garantindo que todos os arquivos sejam disponibilizados localmente.
+
+Após a extração, o Java deve localizar todos os arquivos PDF presentes no diretório extraído. Para cada arquivo PDF encontrado, o Java deve executar um script Python utilizando ProcessBuilder, passando como argumento o caminho absoluto do PDF.
+
+A execução deve ser totalmente sequencial (sem uso de múltiplas threads), pois cada execução representa o processamento de um único repositório e branch. Qualquer paralelismo será tratado em uma camada superior e não deve ser implementado aqui.
+
+Para cada execução do script Python, o Java deve aguardar a finalização do processo, capturar o conteúdo do stdout e considerar que o retorno será exclusivamente o caminho absoluto do arquivo CSV gerado.
+
+No lado Python, o script deve receber como argumento o caminho de um arquivo PDF de relatório do Fortify. O script deve ler o PDF e extrair as vulnerabilidades contidas nele, estruturando os dados com os seguintes campos: nome da vulnerabilidade, severidade, arquivo afetado, linha e descrição.
+
+Após a extração, o script deve gerar um arquivo CSV contendo esses dados, salvando-o no mesmo diretório do PDF processado.
+
+Ao final da execução, o script Python deve imprimir no stdout apenas o caminho absoluto do CSV gerado, sem qualquer outro texto adicional.
+
+Após receber o caminho do CSV, o Java deve ler o arquivo e processar os dados conforme necessário.
+
+A implementação deve ser direta e funcional, sem testes unitários, sem geração de documentação e sem explicações adicionais no código.
